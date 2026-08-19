@@ -80,8 +80,11 @@ namespace AuthenticationDemo.Controllers {
             return View(model);
         }
 
-        public IActionResult ChangePassword() {
-            return View();
+        public IActionResult ChangePassword(string username) {
+            if (string.IsNullOrEmpty(username)) {
+                RedirectToAction("VerifyEmail", "Account");
+            }
+            return View(new ChangePasswordViewModel { Email = username});
         }
     }
 }
