@@ -98,10 +98,10 @@ namespace AuthenticationDemo.Controllers {
                 if (user != null) {
 
                     var result = await userManager.RemovePasswordAsync(user);
+                    result = await userManager.AddPasswordAsync(user, model.NewPassword);
 
-                    if (result.Succeeded) {
-
-                        result = await userManager.AddPasswordAsync(user, model.NewPassword);                 
+                    if (result.Succeeded) {      
+                        
                         return RedirectToAction("Login", "Account");
 
                     }
