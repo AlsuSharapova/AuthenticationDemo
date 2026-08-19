@@ -2,6 +2,7 @@
 using AuthenticationDemo.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AuthenticationDemo.Controllers {
     public class AccountController : Controller {
@@ -82,9 +83,46 @@ namespace AuthenticationDemo.Controllers {
 
         public IActionResult ChangePassword(string username) {
             if (string.IsNullOrEmpty(username)) {
-                RedirectToAction("VerifyEmail", "Account");
+                return RedirectToAction("VerifyEmail", "Account");
             }
             return View(new ChangePasswordViewModel { Email = username});
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model) {
+
+            if (ModelState.IsValid) {
+
+                var user = await userManager.FindByEmailAsync(model.Email);
+
+                if (user != null) {
+
+                    var result = await userManager.RemovePasswordAsync(user);
+
+                    if (result.Succeeded) {
+
+                        result = await userManager.AddPasswordAsync(user, model.NewPassword);                 
+                        return RedirectToAction("Login", "Account");
+
+                    }
+                    else {
+
+                        foreach (var error in result.Errors) {
+                            ModelState.AddModelError("", error.Description);
+                        }
+
+                        return View(model);
+                    }
+                }
+                else {
+                    ModelState.AddModelError("", "Email not found.");
+                    return View(model);
+                }
+            }
+            else {
+                ModelState.AddModelError("", "Something went wrong. Try again.");
+                return View(model);
+            }
         }
     }
 }
