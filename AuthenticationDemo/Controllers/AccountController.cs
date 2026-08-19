@@ -8,5 +8,8 @@ namespace AuthenticationDemo.Controllers {
         public IActionResult Register() {
             return View();
         }
+        public IActionResult VerifyEmail() {
+            return View();
+        }
     }
 }
