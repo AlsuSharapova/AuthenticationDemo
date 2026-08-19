@@ -20,7 +20,7 @@ namespace AuthenticationDemo.ViewModels {
 
         [Required(ErrorMessage = "Confirm Password is required.")]
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm Password.")]
+        [Display(Name = "Confirm Password")]
         public string ConfirmPassword { get; set; }
     }
 }
