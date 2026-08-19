@@ -11,5 +11,8 @@ namespace AuthenticationDemo.Controllers {
         public IActionResult VerifyEmail() {
             return View();
         }
+        public IActionResult ChangePassword() {
+            return View();
+        }
     }
 }
