@@ -1,4 +1,5 @@
 ﻿using AuthenticationDemo.Models;
+using AuthenticationDemo.Services;
 using AuthenticationDemo.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +10,12 @@ namespace AuthenticationDemo.Controllers {
 
         private readonly SignInManager<Users> signInManager;
         private readonly UserManager<Users> userManager;
-        public AccountController(SignInManager<Users> signInManager, UserManager<Users> userManager) {
+        private readonly IEmailSender emailSender;
+
+        public AccountController(SignInManager<Users> signInManager, UserManager<Users> userManager, IEmailSender emailSender) {
             this.signInManager = signInManager;
             this.userManager = userManager;
+            this.emailSender = emailSender;
         }
 
         public IActionResult Login() {
@@ -41,19 +45,48 @@ namespace AuthenticationDemo.Controllers {
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model) {
             if (ModelState.IsValid) {
-                Users users = new Users {
-                    FullName = model.Name,
-                    Email = model.Email,
-                    UserName = model.Email
-                };
+                var existingUser = await userManager.FindByEmailAsync(model.Email);
 
-                var result = await userManager.CreateAsync(users, model.Password);
+                if (existingUser != null) {
+                    if (existingUser.EmailConfirmed) {
+                        ModelState.AddModelError("", "Пользователь с таким email уже зарегистрирован.");
+                        return View(model);
+                    }
+                    else {
+                        // Аккаунт есть, но не подтверждён — обновляем данные и отправляем новый код
+                        existingUser.FullName = model.Name;
+
+                        var removePasswordResult = await userManager.RemovePasswordAsync(existingUser);
+                        if (!removePasswordResult.Succeeded) {
+                            ModelState.AddModelError("", "Не удалось обновить данные. Попробуйте позже.");
+                            return View(model);
+                        }
+
+                        var addPasswordResult = await userManager.AddPasswordAsync(existingUser, model.Password);
+                        if (!addPasswordResult.Succeeded) {
+                            foreach (var error in addPasswordResult.Errors) {
+                                ModelState.AddModelError("", error.Description);
+                            }
+                            return View(model);
+                        }
+
+                        await userManager.UpdateAsync(existingUser);
+                        await GenerateAndSendConfirmationCode(existingUser);
+
+                        return RedirectToAction("ConfirmEmail", "Account", new { userId = existingUser.Id });
+                    }
+                }
+
+                // Пользователя ещё не было — создаём нового
+                Users newUser = new Users { FullName = model.Name, Email = model.Email, UserName = model.Email };
+                var result = await userManager.CreateAsync(newUser, model.Password);
 
                 if (result.Succeeded) {
-                    return RedirectToAction("Login", "Account");
+                    await GenerateAndSendConfirmationCode(newUser);
+                    return RedirectToAction("ConfirmEmail", "Account", new { userId = newUser.Id });
                 }
                 else {
-                    foreach(var error in result.Errors) {
+                    foreach (var error in result.Errors) {
                         ModelState.AddModelError("", error.Description);
                     }
                     return View(model);
@@ -61,6 +94,21 @@ namespace AuthenticationDemo.Controllers {
             }
             return View(model);
         }
+
+        private async Task GenerateAndSendConfirmationCode(Users user) {
+            var random = new Random();
+            var code = random.Next(100000, 999999).ToString();
+
+            user.EmailConfirmationCode = code;
+            user.EmailConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10);
+            await userManager.UpdateAsync(user);
+
+            await emailSender.SendEmailAsync(
+                user.Email,
+                "Код подтверждения",
+                $"Ваш код подтверждения: <b>{code}</b>. Код действителен 10 минут.");
+        }
+
 
         public IActionResult VerifyEmail() {
             return View();
