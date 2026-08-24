@@ -155,6 +155,23 @@ namespace AuthenticationDemo.Controllers {
             return RedirectToAction("Login", "Account");
         }
 
+        [HttpPost]
+        public async Task<IActionResult> ResendCode([FromBody] ResendCodeRequest request) {
+
+            var user = await userManager.FindByIdAsync(request.UserId);
+
+            if(user == null || user.EmailConfirmed) {
+                return Json(new { success = false };
+            }
+
+            await GenerateAndSendConfirmationCode(user);
+
+            return Json(new { success = true });
+
+        }
+        public class ResendCodeRequest {
+            public string UserId { get; set; }
+        }
         public IActionResult VerifyEmail() {
             return View();
         }
