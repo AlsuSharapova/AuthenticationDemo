@@ -5,8 +5,10 @@ namespace AuthenticationDemo.ViewModels {
         [Required]
         public string UserId { get; set; }
 
-        [Required(ErrorMessage = "Enter the confirmation code.")]
-        [StringLength(6, MinimumLength = 6, ErrorMessage = "Code must be 6 characters long.")]
+        [Required(ErrorMessage = "Please enter the confirmation code.")]
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "The code must be 6 digits.")]
         public string Code { get; set; }
+
+        public int SecondsRemaining { get; set; }
     }
 }
