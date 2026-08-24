@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using AuthenticationDemo.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace AuthenticationDemo.ViewModels {
     public class ConfirmEmailViewModel {
@@ -10,5 +11,6 @@ namespace AuthenticationDemo.ViewModels {
         public string Code { get; set; }
 
         public int SecondsRemaining { get; set; }
+        public CodePurpose Purpose { get; set; }
     }
 }

@@ -84,7 +84,7 @@ namespace AuthenticationDemo.Controllers {
                         await userManager.UpdateAsync(existingUser);
                         await GenerateAndSendConfirmationCode(existingUser);
 
-                        return RedirectToAction("ConfirmEmail", "Account", new { userId = existingUser.Id });
+                        return RedirectToAction("ConfirmEmail", "Account", new { userId = existingUser.Id, purpose = CodePurpose.Registration });
                     }
                 }
 
@@ -94,7 +94,7 @@ namespace AuthenticationDemo.Controllers {
 
                 if (result.Succeeded) {
                     await GenerateAndSendConfirmationCode(newUser);
-                    return RedirectToAction("ConfirmEmail", "Account", new { userId = newUser.Id });
+                    return RedirectToAction("ConfirmEmail", "Account", new { userId = newUser.Id, purpose = CodePurpose.Registration });
                 }
                 else {
                     foreach (var error in result.Errors) {
@@ -108,7 +108,7 @@ namespace AuthenticationDemo.Controllers {
 
         //CONFIRM EMAIL
         [HttpGet]
-        public async Task<IActionResult> ConfirmEmail(string userId) {
+        public async Task<IActionResult> ConfirmEmail(string userId, CodePurpose purpose) {
             if (string.IsNullOrEmpty(userId)) {
                 return RedirectToAction("Register", "Account");
             }
@@ -120,7 +120,8 @@ namespace AuthenticationDemo.Controllers {
 
             var model = new ConfirmEmailViewModel {
                 UserId = userId,
-                SecondsRemaining = GetResendSecondsRemaining(user)
+                SecondsRemaining = GetResendSecondsRemaining(user),
+                Purpose = purpose
             };
             return View(model);
         }
