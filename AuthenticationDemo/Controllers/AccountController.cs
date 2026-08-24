@@ -123,7 +123,38 @@ namespace AuthenticationDemo.Controllers {
             var model = new ConfirmEmailViewModel { UserId = userId };
             return View(model);
         }
-        
+        [HttpPost]
+        public async Task<IActionResult> ConfirmEmail(ConfirmEmailViewModel model) {
+            if (!ModelState.IsValid) {
+                return View(model);
+            }
+
+            var user = await userManager.FindByIdAsync(model.UserId);
+            if (user == null) {
+                ModelState.AddModelError("", "User not found.");
+                return View(model);
+            }
+
+            if (user.EmailConfirmationCode != model.Code) {
+                ModelState.AddModelError("", "Invalid confirmation code.");
+                return View(model);
+            }
+
+            if (user.EmailConfirmationCodeExpiry == null || user.EmailConfirmationCodeExpiry < DateTime.UtcNow) {
+                ModelState.AddModelError("", "Confirmation code has expired.");
+                return View(model);
+            }
+
+            user.EmailConfirmed = true;
+            user.EmailConfirmationCode = null;
+            user.EmailConfirmationCodeExpiry = null;
+
+            await userManager.UpdateAsync(user);
+
+            TempData["Message"] = "Email confirmed successfully. You can now log in.";
+            return RedirectToAction("Login", "Account");
+        }
+
         public IActionResult VerifyEmail() {
             return View();
         }
