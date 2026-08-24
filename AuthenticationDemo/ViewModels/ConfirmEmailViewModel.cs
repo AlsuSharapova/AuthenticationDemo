@@ -3,7 +3,7 @@
 namespace AuthenticationDemo.ViewModels {
     public class ConfirmEmailViewModel {
         [Required]
-        public int Id { get; set; }
+        public string UserId { get; set; }
 
         [Required(ErrorMessage = "Enter the confirmation code.")]
         [StringLength(6, MinimumLength = 6, ErrorMessage = "Code must be 6 characters long.")]

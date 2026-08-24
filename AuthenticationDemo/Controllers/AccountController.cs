@@ -3,6 +3,7 @@ using AuthenticationDemo.Services;
 using AuthenticationDemo.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AuthenticationDemo.Controllers {
@@ -108,8 +109,21 @@ namespace AuthenticationDemo.Controllers {
                 "Код подтверждения",
                 $"Ваш код подтверждения: <b>{code}</b>. Код действителен 10 минут.");
         }
+        [HttpGet]
+        public async Task<IActionResult> ConfirmEmail(string userId) {
+            if (string.IsNullOrEmpty(userId)) {
+                return RedirectToAction("Register", "Account");
+            }
 
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null) {
+                return RedirectToAction("Register", "Account");
+            }
 
+            var model = new ConfirmEmailViewModel { UserId = userId };
+            return View(model);
+        }
+        
         public IActionResult VerifyEmail() {
             return View();
         }
