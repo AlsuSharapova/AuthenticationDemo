@@ -13,6 +13,7 @@
         <form asp-action="ConfirmEmail" method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="UserId" />
+            <input type="hidden" asp-for="Purpose" />
 
             <div class="mb-3">
                 <label asp-for="Code" class="form-label">Confirmation Code</label>
@@ -66,7 +67,7 @@
             fetch('@Url.Action("ResendCode", "Account")', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: '@Model.UserId' })
+                body: JSON.stringify({ userId: '@Model.UserId', purpose: '@Model.Purpose' })
             })
             .then(response => response.json())
             .then(data => {

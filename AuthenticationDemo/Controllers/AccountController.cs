@@ -150,14 +150,21 @@ namespace AuthenticationDemo.Controllers {
                 return View(model);
             }
 
-            user.EmailConfirmed = true;
             user.EmailConfirmationCode = null;
             user.EmailConfirmationCodeExpiry = null;
 
-            await userManager.UpdateAsync(user);
+            if (model.Purpose == CodePurpose.Registration) {
+                user.EmailConfirmed = true;
+                await userManager.UpdateAsync(user);
 
-            TempData["Message"] = "Email confirmed successfully. You can now log in.";
-            return RedirectToAction("Login", "Account");
+                TempData["Message"] = "Email confirmed successfully. You can now log in.";
+                return RedirectToAction("Login", "Account");
+            }
+            else // CodePurpose.PasswordReset
+            {
+                await userManager.UpdateAsync(user);
+                return RedirectToAction("ChangePassword", "Account", new { username = user.UserName });
+            }
         }
 
         //RESEND CODE
@@ -177,6 +184,7 @@ namespace AuthenticationDemo.Controllers {
         }
         public class ResendCodeRequest {
             public string UserId { get; set; }
+            public CodePurpose Purpose { get; set; }
         }
         
         //VERIFY EMAIL
@@ -186,14 +194,18 @@ namespace AuthenticationDemo.Controllers {
         [HttpPost]
         public async Task<IActionResult> VerifyEmail(VerifyEmailViewModel model) {
             if (ModelState.IsValid) {
-                var user = await userManager.FindByNameAsync(model.Email);
-
-                if(user == null) {
+                var user = await userManager.FindByEmailAsync(model.Email);
+                if (user == null) {
                     ModelState.AddModelError("", "Something is wrong.");
                     return View(model);
                 }
+                else if (!user.EmailConfirmed) {
+                    ModelState.AddModelError("", "Please register first.");
+                    return View(model);
+                }
                 else {
-                    return RedirectToAction("ChangePassword", "Account", new {username = user.UserName});
+                    await GenerateAndSendConfirmationCode(user);
+                    return RedirectToAction("ConfirmEmail", "Account", new { userId = user.Id, purpose = CodePurpose.PasswordReset });
                 }
             }
             return View(model);
