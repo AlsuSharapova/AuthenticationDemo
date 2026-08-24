@@ -19,6 +19,7 @@ namespace AuthenticationDemo.Controllers {
             this.emailSender = emailSender;
         }
 
+        //LOGIN
         public IActionResult Login() {
             return View();
         }
@@ -39,6 +40,7 @@ namespace AuthenticationDemo.Controllers {
             return View(model);
         }
 
+        //REGISTER
         public IActionResult Register() {
             return View();
         }
@@ -96,6 +98,7 @@ namespace AuthenticationDemo.Controllers {
             return View(model);
         }        
 
+        //CONFIRM EMAIL
         [HttpGet]
         public async Task<IActionResult> ConfirmEmail(string userId) {
             if (string.IsNullOrEmpty(userId)) {
@@ -148,6 +151,7 @@ namespace AuthenticationDemo.Controllers {
             return RedirectToAction("Login", "Account");
         }
 
+        //RESEND CODE
         [HttpPost]
         public async Task<IActionResult> ResendCode([FromBody] ResendCodeRequest request) {
 
@@ -165,6 +169,8 @@ namespace AuthenticationDemo.Controllers {
         public class ResendCodeRequest {
             public string UserId { get; set; }
         }
+        
+        //VERIFY EMAIL
         public IActionResult VerifyEmail() {
             return View();
         }
@@ -184,6 +190,7 @@ namespace AuthenticationDemo.Controllers {
             return View(model);
         }
 
+        //CHANGE PASSWORD
         public IActionResult ChangePassword(string username) {
             if (string.IsNullOrEmpty(username)) {
                 return RedirectToAction("VerifyEmail", "Account");
@@ -228,11 +235,14 @@ namespace AuthenticationDemo.Controllers {
             }
         }
 
+        //LOGOUT
         public async Task<IActionResult> Logout() {
             await signInManager.SignOutAsync();
             return RedirectToAction("Index", "Home");
         }
 
+
+        //HELPERS
         private async Task GenerateAndSendConfirmationCode(Users user) {
             var random = new Random();
             var code = random.Next(100000, 999999).ToString();
@@ -246,6 +256,7 @@ namespace AuthenticationDemo.Controllers {
                 "Код подтверждения",
                 $"Ваш код подтверждения: <b>{code}</b>. Код действителен 10 минут.");
         }
+
         private int GetResendSecondsRemaining(Users user) {
             if (user.EmailConfirmationCodeExpiry == null)
                 return 0;
