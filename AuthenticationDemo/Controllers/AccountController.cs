@@ -94,21 +94,8 @@ namespace AuthenticationDemo.Controllers {
                 }
             }
             return View(model);
-        }
+        }        
 
-        private async Task GenerateAndSendConfirmationCode(Users user) {
-            var random = new Random();
-            var code = random.Next(100000, 999999).ToString();
-
-            user.EmailConfirmationCode = code;
-            user.EmailConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10);
-            await userManager.UpdateAsync(user);
-
-            await emailSender.SendEmailAsync(
-                user.Email,
-                "Код подтверждения",
-                $"Ваш код подтверждения: <b>{code}</b>. Код действителен 10 минут.");
-        }
         [HttpGet]
         public async Task<IActionResult> ConfirmEmail(string userId) {
             if (string.IsNullOrEmpty(userId)) {
@@ -120,7 +107,10 @@ namespace AuthenticationDemo.Controllers {
                 return RedirectToAction("Register", "Account");
             }
 
-            var model = new ConfirmEmailViewModel { UserId = userId };
+            var model = new ConfirmEmailViewModel {
+                UserId = userId,
+                SecondsRemaining = GetResendSecondsRemaining(user)
+            };
             return View(model);
         }
         [HttpPost]
@@ -132,16 +122,19 @@ namespace AuthenticationDemo.Controllers {
             var user = await userManager.FindByIdAsync(model.UserId);
             if (user == null) {
                 ModelState.AddModelError("", "User not found.");
+                model.SecondsRemaining = 0;
                 return View(model);
             }
 
             if (user.EmailConfirmationCode != model.Code) {
                 ModelState.AddModelError("", "Invalid confirmation code.");
+                model.SecondsRemaining = GetResendSecondsRemaining(user);
                 return View(model);
             }
 
             if (user.EmailConfirmationCodeExpiry == null || user.EmailConfirmationCodeExpiry < DateTime.UtcNow) {
                 ModelState.AddModelError("", "Confirmation code has expired.");
+                model.SecondsRemaining = GetResendSecondsRemaining(user);
                 return View(model);
             }
 
@@ -161,7 +154,7 @@ namespace AuthenticationDemo.Controllers {
             var user = await userManager.FindByIdAsync(request.UserId);
 
             if(user == null || user.EmailConfirmed) {
-                return Json(new { success = false };
+                return Json(new { success = false });
             }
 
             await GenerateAndSendConfirmationCode(user);
@@ -238,6 +231,31 @@ namespace AuthenticationDemo.Controllers {
         public async Task<IActionResult> Logout() {
             await signInManager.SignOutAsync();
             return RedirectToAction("Index", "Home");
+        }
+
+        private async Task GenerateAndSendConfirmationCode(Users user) {
+            var random = new Random();
+            var code = random.Next(100000, 999999).ToString();
+
+            user.EmailConfirmationCode = code;
+            user.EmailConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10);
+            await userManager.UpdateAsync(user);
+
+            await emailSender.SendEmailAsync(
+                user.Email,
+                "Код подтверждения",
+                $"Ваш код подтверждения: <b>{code}</b>. Код действителен 10 минут.");
+        }
+        private int GetResendSecondsRemaining(Users user) {
+            if (user.EmailConfirmationCodeExpiry == null)
+                return 0;
+
+            // Код отправляется на 10 минут, а "подождать" нужно всего 1 минуту
+            var sentAt = user.EmailConfirmationCodeExpiry.Value.AddMinutes(-10);
+            var resendAllowedAt = sentAt.AddMinutes(1);
+
+            var secondsLeft = (int)(resendAllowedAt - DateTime.UtcNow).TotalSeconds;
+            return secondsLeft > 0 ? secondsLeft : 0;
         }
     }
 }
