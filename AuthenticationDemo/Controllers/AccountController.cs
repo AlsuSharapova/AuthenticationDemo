@@ -162,8 +162,12 @@ namespace AuthenticationDemo.Controllers {
             }
             else // CodePurpose.PasswordReset
             {
+                var resetToken = Guid.NewGuid().ToString("N");
+                user.PasswordResetToken = resetToken;
+                user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(10);
                 await userManager.UpdateAsync(user);
-                return RedirectToAction("ChangePassword", "Account", new { username = user.UserName });
+
+                return RedirectToAction("ChangePassword", "Account", new { username = user.UserName, token = resetToken });
             }
         }
 
