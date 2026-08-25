@@ -216,41 +216,42 @@ namespace AuthenticationDemo.Controllers {
         }
 
         //CHANGE PASSWORD
-        public IActionResult ChangePassword(string username) {
-            if (string.IsNullOrEmpty(username)) {
+        public async Task<IActionResult> ChangePassword(string username, string token) {
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(token)) {
                 return RedirectToAction("VerifyEmail", "Account");
             }
-            return View(new ChangePasswordViewModel { Email = username});
+
+            var user = await userManager.FindByNameAsync(username);
+            if (user == null || user.PasswordResetToken != token || user.PasswordResetTokenExpiry == null || user.PasswordResetTokenExpiry < DateTime.UtcNow) {
+                return RedirectToAction("VerifyEmail", "Account");
+            }
+
+            return View(new ChangePasswordViewModel { Email = username, Token = token });
         }
 
         [HttpPost]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model) {
-
             if (ModelState.IsValid) {
-
                 var user = await userManager.FindByEmailAsync(model.Email);
 
-                if (user != null) {
+                if (user == null || user.PasswordResetToken != model.Token || user.PasswordResetTokenExpiry == null || user.PasswordResetTokenExpiry < DateTime.UtcNow) {
+                    ModelState.AddModelError("", "This link has expired. Please request a new one.");
+                    return View(model);
+                }
 
-                    var result = await userManager.RemovePasswordAsync(user);
-                    result = await userManager.AddPasswordAsync(user, model.NewPassword);
+                var result = await userManager.RemovePasswordAsync(user);
+                result = await userManager.AddPasswordAsync(user, model.NewPassword);
+                if (result.Succeeded) {
+                    user.PasswordResetToken = null;
+                    user.PasswordResetTokenExpiry = null;
+                    await userManager.UpdateAsync(user);
 
-                    if (result.Succeeded) {      
-                        
-                        return RedirectToAction("Login", "Account");
-
-                    }
-                    else {
-
-                        foreach (var error in result.Errors) {
-                            ModelState.AddModelError("", error.Description);
-                        }
-
-                        return View(model);
-                    }
+                    return RedirectToAction("Login", "Account");
                 }
                 else {
-                    ModelState.AddModelError("", "Email not found.");
+                    foreach (var error in result.Errors) {
+                        ModelState.AddModelError("", error.Description);
+                    }
                     return View(model);
                 }
             }
